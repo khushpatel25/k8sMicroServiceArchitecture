@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: con1-deployment
+  labels:
+    app: k8s-con1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-con1
+  template:
+    metadata:
+      labels:
+        app: k8s-con1
+    spec:
+      containers:
+        - name: k8s-con1
+          image: northamerica-northeast1-docker.pkg.dev/cloud-k8s-427803/k8s-assignment/k8s-con1
+          ports:
+            - containerPort: 6000
+          env:
+            - name: PORT
+              value: "6000"
+            - name: FILE_DIRECTORY
+              value: "/khush_PV_dir"
+            - name: CONTAINER_2_ENDPOINT
+              value: "http://con2-service:6000/parser"
+          volumeMounts:
+            - mountPath: /khush_PV_dir
+              name: persistent-volume
+      volumes:
+        - name: persistent-volume
+          persistentVolumeClaim:
+            claimName: k8s-assignment-pv-claim

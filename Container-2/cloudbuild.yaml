@@ -1,0 +1,51 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+
+  # Setup authenticator for kubectl (Uncomment if needed)
+  - id: Authenticate GKE 
+    name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Step 1: Getting cluster credentials..."
+        gcloud container clusters get-credentials k8s-csci-5409-cluster --zone us-east1-b --project ${PROJECT_ID}
+
+  # Docker Build
+  - id: Build
+    name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Step 2: Building Docker image..."
+        docker build -t northamerica-northeast1-docker.pkg.dev/${PROJECT_ID}/k8s-assignment/k8s-con2:${SHORT_SHA} -t northamerica-northeast1-docker.pkg.dev/${PROJECT_ID}/k8s-assignment/k8s-con2:latest .
+        echo "Docker image built successfully."
+
+  # Docker Push
+  - id: Push
+    name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Step 3: Pushing Docker image..."
+        docker push --all-tags northamerica-northeast1-docker.pkg.dev/${PROJECT_ID}/k8s-assignment/k8s-con2
+        echo "Image pushed successfully."
+
+  # Updating/building deployment in cluster
+  - id: Update GKE
+    name: "gcr.io/cloud-builders/kubectl"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Step 4: Creating/Updating...."
+        kubectl get deployment con2-deployment && kubectl set image deployment/con2-deployment k8s-con2=northamerica-northeast1-docker.pkg.dev/${PROJECT_ID}/k8s-assignment/k8s-con2:${SHORT_SHA}
+        kubectl get deployment con2-deployment || kubectl get svc con2-service || kubectl apply -f ./k8s-files
+        echo "Deployment created/updated successfully"
+    env:
+      - 'CLOUDSDK_COMPUTE_REGION=us-east1-b'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=k8s-csci-5409-cluster'
